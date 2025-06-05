@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ETL</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h2>ETL</h2>
+    <h3>Subir archivo para limpieza</h3>
+    <p>Formatos válidos: xlsx, csv.</p>
+    <form id="etlForm" method="POST" action="/upload" enctype="multipart/form-data" onsubmit="mostrarSpinner(event)">
+        <input type="file" name="file" accept=".xlsx, .csv" multiple required>
+        <button type="submit">Procesar</button>
+    </form>
+
+    <div id="overlay">
+        <div class="popup">
+            <div class="loader"></div>
+            <p id="textoProcesando">Procesando archivo... por favor esperá ⏳</p>
+        </div>
+    </div>
+
+    <!-- agregado el 19/04 21:51 -->
+    <script>
+        let intervalId = null;
+    
+        function mostrarSpinner(event) {
+            event.preventDefault();
+    
+            const input = document.querySelector('input[type="file"]');
+            const archivos = Array.from(input.files).map(f => f.name);
+            const textoBase = "Procesando archivo: ";
+            const textoFinal = "... por favor esperá ⏳";
+    
+            let index = 0;
+    
+            if (archivos.length > 0) {
+                intervalId = setInterval(() => {
+                    const mensaje = textoBase + archivos[index] + textoFinal;
+                    document.getElementById('textoProcesando').innerText = mensaje;
+                    index = (index + 1) % archivos.length;
+                }, 1000); // cambia cada 1 segundo
+            }
+    
+            document.body.classList.add('processing');
+            document.getElementById('overlay').style.display = 'flex';
+    
+            // Enviamos el formulario luego de un retardo (opcional)
+            setTimeout(() => {
+                clearInterval(intervalId);  // Limpiar antes de enviar
+                document.getElementById('etlForm').submit();
+            }, 3000 + archivos.length * 1000); // Esperar un poco más si hay varios
+        }
+    </script>
+
+    <!-- Agregado 19/04 20:59 -->
+    <hr>
+    <button onclick="verProcesados()">Ver archivos procesados</button>
+    <button onclick="location.href='/'">Volver al inicio</button>
+
+    <div id="listaProcesados" style="margin-top: 20px; font-family: sans-serif;"></div>
+
+    <script>
+        function verProcesados() {
+            fetch('/archivos_procesados')
+                .then(response => response.json())
+                .then(data => {
+                    const contenedor = document.getElementById('listaProcesados');
+                    if (data.archivos.length === 0) {
+                        contenedor.innerHTML = "<p>No existen archivos procesados aún.</p>";
+                    } else {
+                        const lista = data.archivos.map(nombre => `<li>${nombre}</li>`).join('');
+                        contenedor.innerHTML = `<p>Carpeta de procesados:</p><ul>${lista}</ul>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('listaProcesados').innerHTML = "<p>Hubo un error al cargar los archivos.</p>";
+                });
+        }
+    </script>
+
+</body>
+</html>
